@@ -29,12 +29,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
+    let isMounted = true; // Para evitar updates si el componente se desmonta
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      console.log("onAuthStateChanged:", currentUser);
-      setUser(currentUser);
-      setLoading(false);
+      if (isMounted) {
+        console.log("onAuthStateChanged:", currentUser);
+        setUser(currentUser);
+        setLoading(false);
+      }
     });
-    return () => unsubscribe();
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
   }, []);
 
   return (

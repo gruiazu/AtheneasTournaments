@@ -1,7 +1,7 @@
 // app/_layout.tsx
 import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
 import { useFonts } from "expo-font";
-import { Slot } from "expo-router"; // Usamos Slot en lugar de Outlet
+import { Slot } from "expo-router"; // Se usa Slot para renderizar las rutas hijas
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
@@ -27,7 +27,8 @@ export default function Layout() {
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
       <AuthProvider>
-        <Slot />  {/* Aquí se renderizarán las rutas hijas */}
+        {/* Todas las rutas hijas se renderizarán aquí */}
+        <Slot />
       </AuthProvider>
       <StatusBar style="auto" />
     </ThemeProvider>
