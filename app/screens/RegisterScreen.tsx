@@ -1,32 +1,70 @@
 // app/screens/RegisterScreen.tsx
 import React, { useState } from "react";
-import { View, Text, TextInput, Button, Alert, StyleSheet } from "react-native";
-import { registerUser } from "../../constants/auth"; // Asegúrate de la ruta correcta
+import { View, Text, TextInput, Button, Alert, StyleSheet, ScrollView } from "react-native";
+import { registerUser } from "../../constants/auth"; // Ajusta la ruta si es necesario
 import { useRouter } from "expo-router";
+import { useAuth } from "@/constants/AuthContext"; // Para refrescar datos después del registro
 
 const RegisterScreen = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const router = useRouter();
+  const { refreshUserData } = useAuth(); // Para actualizar el contexto
 
   const handleRegister = async () => {
+    if (!email || !password || !firstName || !lastName || !phoneNumber) {
+      Alert.alert("Error", "Todos los campos son obligatorios.");
+      return;
+    }
     try {
-      const user = await registerUser(email, password);
-      Alert.alert("Registro exitoso", "Por favor, inicia sesión.");
+      await registerUser(email, password, {
+        firstName,
+        lastName,
+        phoneNumber,
+      });
+      Alert.alert("Registro exitoso", "Usuario registrado. Por favor, inicia sesión.");
+      // Opcional: podrías intentar loguear al usuario automáticamente aquí
+      // y luego llamar a refreshUserData()
       router.replace("/login");
     } catch (error: any) {
-      Alert.alert("Error", error.message);
+      Alert.alert("Error en el registro", error.message || "Ocurrió un error desconocido.");
     }
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Registrarse</Text>
+      <TextInput
+        placeholder="Nombres"
+        value={firstName}
+        onChangeText={setFirstName}
+        style={styles.input}
+        autoCapitalize="words"
+      />
+      <TextInput
+        placeholder="Apellidos"
+        value={lastName}
+        onChangeText={setLastName}
+        style={styles.input}
+        autoCapitalize="words"
+      />
       <TextInput
         placeholder="Correo electrónico"
         value={email}
         onChangeText={setEmail}
         style={styles.input}
+        keyboardType="email-address"
+        autoCapitalize="none"
+      />
+      <TextInput
+        placeholder="Número de teléfono"
+        value={phoneNumber}
+        onChangeText={setPhoneNumber}
+        style={styles.input}
+        keyboardType="phone-pad"
       />
       <TextInput
         placeholder="Contraseña"
@@ -41,15 +79,35 @@ const RegisterScreen = () => {
       <View style={styles.buttonContainer}>
         <Button title="Ir a Inicio de Sesión" onPress={() => router.push("/login")} color="green" />
       </View>
-    </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", padding: 20 },
-  title: { fontSize: 24, textAlign: "center", marginBottom: 20 },
-  input: { borderWidth: 1, padding: 10, marginBottom: 10, borderRadius: 5 },
-  buttonContainer: { marginBottom: 10 },
+  container: {
+    flexGrow: 1,
+    justifyContent: "center",
+    padding: 20,
+    backgroundColor: "#F5F5F5",
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  input: {
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#ddd",
+    padding: 12,
+    marginBottom: 15,
+    borderRadius: 5,
+    fontSize: 16,
+  },
+  buttonContainer: {
+    marginBottom: 10,
+  },
 });
 
 export default RegisterScreen;

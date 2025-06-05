@@ -1,16 +1,13 @@
-// constants/AuthContext.tsx
-import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { getAuth, onAuthStateChanged, User } from "firebase/auth";
+import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
+import { getAuth, onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import app from "./FirebaseConfig";
+import { doc, getDoc, getFirestore } from "firebase/firestore";
+import { UserData, AuthContextType as CustomAuthContextType } from "@/types"; // Importar tipos
 
 const auth = getAuth(app);
+const db = getFirestore(app);
 
-type AuthContextType = {
-  user: User | null;
-  loading: boolean;
-};
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<CustomAuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -25,26 +22,65 @@ type AuthProviderProps = {
 };
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [userData, setUserData] = useState<UserData | null>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
 
-  useEffect(() => {
-    let isMounted = true; // Para evitar updates si el componente se desmonta
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (isMounted) {
-        console.log("onAuthStateChanged:", currentUser);
-        setUser(currentUser);
-        setLoading(false);
+  const fetchUserDataAndClaims = useCallback(async (firebaseUser: FirebaseUser | null) => {
+    if (firebaseUser) {
+      try {
+        // Forzar refresco del token para obtener los últimos claims
+        const idTokenResult = await firebaseUser.getIdTokenResult(true);
+        setIsAdmin(!!idTokenResult.claims.admin);
+
+        // Obtener datos adicionales del usuario desde Firestore
+        const userDocRef = doc(db, "users", firebaseUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          setUserData(userDocSnap.data() as UserData);
+        } else {
+          setUserData(null); // O manejar el caso donde el documento no existe
+        }
+      } catch (error) {
+        console.error("Error fetching user data or claims:", error);
+        setIsAdmin(false);
+        setUserData(null);
       }
-    });
-    return () => {
-      isMounted = false;
-      unsubscribe();
-    };
+    } else {
+      setIsAdmin(false);
+      setUserData(null);
+    }
   }, []);
 
+
+  useEffect(() => {
+    setLoading(true);
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        await fetchUserDataAndClaims(currentUser);
+      } else {
+        setIsAdmin(false);
+        setUserData(null);
+      }
+      setLoading(false);
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, [fetchUserDataAndClaims]);
+
+  const refreshUserData = async () => {
+    if (user) {
+      setLoading(true);
+      await fetchUserDataAndClaims(user);
+      setLoading(false);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading }}>
+    <AuthContext.Provider value={{ user, userData, isAdmin, loading, refreshUserData }}>
       {children}
     </AuthContext.Provider>
   );
