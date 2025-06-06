@@ -6,6 +6,7 @@ export interface UserData {
   lastName: string;
   phoneNumber: string;
   email: string;
+  isAdmin?: boolean; // <-- Añade esta línea
 }
 
 export interface Tournament {

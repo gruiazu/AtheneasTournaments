@@ -20,6 +20,21 @@ import {
   const db = getFirestore(app);
   
   // --- User Functions ---
+
+  // --- NUEVA FUNCIÓN ---
+export const getAdminUsers = async (): Promise<UserData[]> => {
+  const usersRef = collection(db, 'users');
+  // Creamos una consulta para encontrar todos los documentos donde isAdmin sea true
+  const q = query(usersRef, where('isAdmin', '==', true));
+  
+  const querySnapshot = await getDocs(q);
+  const admins: UserData[] = [];
+  querySnapshot.forEach((doc) => {
+    admins.push(doc.data() as UserData);
+  });
+  return admins;
+};
+
   
   export const createUserDocument = async (
     uid: string,
